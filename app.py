@@ -24,7 +24,6 @@ from requests.auth import HTTPBasicAuth
 from smtplib import SMTP
 from email.utils import parseaddr
 import reset_web_driver
-import threading
 
 # set configuration values
 class Config:
@@ -586,17 +585,17 @@ def clean_text(text):
 
     return clean_text
 
-@scheduler.task(trigger=CronTrigger(hour=9, minute=0, day_of_week="mon-fri"), id='1', max_instances=2)
+@scheduler.task(trigger=CronTrigger(hour=8, minute=0, day_of_week="mon-fri"), id='1', max_instances=2)
 def tarea_1():
     try:
-        print("Ejecutando tarea 1... 'Estado cato 09:00' ")
+        print("Ejecutando tarea 1... 'Estado cato 08:00' ")
         # Código de la tarea 1
         
         main(['hortega@fynsa.cl', 'mallende@fynsa.cl'], ['helpdesk@acdata.cl'])
         #main(['fynsabottest@gmail.com'], ['fynsabottest@gmail.com'])
         
     except Exception as e:
-        print(f"Error en tarea 1 'Estado cato 09:00' : {e}")
+        print(f"Error en tarea 1 'Estado cato 08:00' : {e}")
         traceback.print_exc()
 
         save_output_to_file(e)
@@ -607,16 +606,16 @@ def tarea_1():
         # Puedes reprogramar la tarea para intentar nuevamente
         scheduler.add_job(tarea_1, trigger='date', run_date=next_run_time)
 
-@scheduler.task(trigger=CronTrigger(hour=12, minute=0, day_of_week="mon-fri"), id='2', max_instances=2)
+@scheduler.task(trigger=CronTrigger(hour=15, minute=0, day_of_week="mon-fri"), id='2', max_instances=2)
 def tarea_2():
     try:
-        print("Ejecutando tarea 2... 'Estado cato 12:00 '")
+        print("Ejecutando tarea 2... 'Estado cato 15:00 '")
         # Código de la tarea 2
         main(['hortega@fynsa.cl', 'mallende@fynsa.cl'], ['helpdesk@acdata.cl'] )
         #main(['fynsabottest@gmail.com'], ['fynsabottest@gmail.com'] )
 
     except Exception as e:
-        print(f"Error en tarea 2 'Estado cato 12:00' : {e}")
+        print(f"Error en tarea 2 'Estado cato 15:00' : {e}")
         traceback.print_exc()
 
         save_output_to_file(e)
@@ -626,17 +625,17 @@ def tarea_2():
         # Puedes reprogramar la tarea para intentar nuevamente
         scheduler.add_job(tarea_2, trigger='date', run_date=next_run_time)
 
-@scheduler.task(trigger=CronTrigger(hour=15, minute=0, day_of_week="mon-fri"), id='3', max_instances=2)
+@scheduler.task(trigger=CronTrigger(hour=18, minute=0, day_of_week="mon-fri"), id='3', max_instances=2)
 def tarea_3():
     try:
-        print("Ejecutando tarea 3... 'Estado cato 15:00 '")
+        print("Ejecutando tarea 3... 'Estado cato 18:00 '")
         # Código de la tarea 3
         main(['hortega@fynsa.cl', 'mallende@fynsa.cl'], ['helpdesk@acdata.cl'])
         #main(['fynsabottest@gmail.com'], ['fynsabottest@gmail.com'] )
         
 
     except Exception as e:
-        print(f"Error en tarea 3 'Estado cato 15:00' : {e}")
+        print(f"Error en tarea 3 'Estado cato 18:00' : {e}")
         traceback.print_exc()
 
         save_output_to_file(e)
