@@ -65,15 +65,14 @@ token_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token'
 scope = ['https://outlook.office365.com/.default']
 
 # Usuarios permitidos para enviar instrucciones
-allowed_senders = ["carl.acevedoa@duocuc.cl", "cacevedo@acdata.cl","scancino@acdata.cl", "ctoro@acdata.cl","fynsabottest@gmail.com"]
+allowed_senders = ["carl.acevedoa@duocuc.cl", "cacevedo@acdata.cl","scancino@acdata.cl", "ctoro@acdata.cl","fynsabottest@gmail.com", "helpdesk@acdata.cl"]
 
 # Lista de instrucciones programadas
-instructions = ["Reiniciar", "Estado", "Test"]
+instructions = ["Reiniciar", "Estado"]
 
 # Variables externas
 
 contador_error_IMAP4 = 0
-
 
 def get_oauth_token(client_id, client_secret, tenant_id, scope):
 
@@ -451,7 +450,7 @@ def check_status():
         image = createImageFromLog(output)
 
         create_email("error", image, ['helpdesk@acdata.cl'], ['fynsabottest@gmail.com'])
-
+        #create_email("error", image, ['fynsabottest@gmail.com'], ['fynsabottest@gmail.com'])
         #Envia el correo
         # sendEmail(['helpdesk@acdata.cl'], asunto, ['fynsabottest@gmail.com'], body)
         # sendEmail(['fynsabottest@gmail.com'], asunto, ['fynsabottest@gmail.com'], body)
@@ -516,21 +515,25 @@ def connectSSH(comand):
             # Lee la salida
             output = channel.recv(4096).decode()
 
-            # Realizar pruebas de validacion ...... PENDIENTE
-            
-            # Reemplaza 'Status: UP' por 'Status: DOWN Reason: IPSec-SA Proposals'
-            #output = re.sub(r'Status: UP', r'Status: DOWN Reason: IPSec-SA Proposals', output)
+            if not output.strip():
+                raise ValueError("La salida esta vacia")
 
-            # Utilizar expresiones regulares (regex) para cortar desde "vShield Edge IPSec Service Status:"
-            match = re.search(r'vShield Edge IPSec Service Status:(.+?)vse-', output, re.DOTALL)
-            if match:
-                # Imprimir el resultado cortado
-                output = clean_text(match.group(1))
-                
             else:
-                print("No se encontró la coincidencia.")
+                # Realizar pruebas de validacion ...... PENDIENTE
+                
+                # Reemplaza 'Status: UP' por 'Status: DOWN Reason: IPSec-SA Proposals'
+                #output = re.sub(r'Status: UP', r'Status: DOWN Reason: IPSec-SA Proposals', output)
 
-            time.sleep(1)
+                # Utilizar expresiones regulares (regex) para cortar desde "vShield Edge IPSec Service Status:"
+                match = re.search(r'vShield Edge IPSec Service Status:(.+?)vse-', output, re.DOTALL)
+                if match:
+                    # Imprimir el resultado cortado
+                    output = clean_text(match.group(1))
+                    
+                else:
+                    print("No se encontró la coincidencia.")
+
+                time.sleep(1)
 
             # Imprime la salida
             
@@ -588,7 +591,9 @@ def tarea_1():
     try:
         print("Ejecutando tarea 1... 'Estado cato 09:00' ")
         # Código de la tarea 1
+        
         main(['hortega@fynsa.cl', 'mallende@fynsa.cl'], ['helpdesk@acdata.cl'])
+        #main(['fynsabottest@gmail.com'], ['fynsabottest@gmail.com'])
         
     except Exception as e:
         print(f"Error en tarea 1 'Estado cato 09:00' : {e}")
@@ -608,6 +613,7 @@ def tarea_2():
         print("Ejecutando tarea 2... 'Estado cato 12:00 '")
         # Código de la tarea 2
         main(['hortega@fynsa.cl', 'mallende@fynsa.cl'], ['helpdesk@acdata.cl'] )
+        #main(['fynsabottest@gmail.com'], ['fynsabottest@gmail.com'] )
 
     except Exception as e:
         print(f"Error en tarea 2 'Estado cato 12:00' : {e}")
@@ -626,6 +632,8 @@ def tarea_3():
         print("Ejecutando tarea 3... 'Estado cato 15:00 '")
         # Código de la tarea 3
         main(['hortega@fynsa.cl', 'mallende@fynsa.cl'], ['helpdesk@acdata.cl'])
+        #main(['fynsabottest@gmail.com'], ['fynsabottest@gmail.com'] )
+        
 
     except Exception as e:
         print(f"Error en tarea 3 'Estado cato 15:00' : {e}")
@@ -638,7 +646,7 @@ def tarea_3():
         # Puedes reprogramar la tarea para intentar nuevamente
         scheduler.add_job(tarea_3, trigger='date', run_date=next_run_time)
 
-@scheduler.task(trigger=IntervalTrigger(minutes=15), id='4', max_instances=3)
+@scheduler.task(trigger=IntervalTrigger(minutes=30), id='4', max_instances=4)
 def check_service_status():
 
     try:
@@ -661,17 +669,20 @@ def check_service_status():
 @scheduler.task(trigger=IntervalTrigger(minutes=1), id='5', max_instances=4)
 def receive_email():
 
+    global contador_error_IMAP4
+
     try:
         
         receiveEmailWrapper()
     
     except imaplib.IMAP4.error as e:
 
-        contador_error_IMAP4 = contador_error_IMAP4 + 1
+        contador_error_IMAP4 += 1
 
         if contador_error_IMAP4 >= 10:
 
             print(f"Se ha alcanzado el numero maximo de reintentos para ejecutar la tarea ... ")
+            print(f"Error: {e}")
             
         else:
 

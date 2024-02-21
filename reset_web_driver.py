@@ -109,7 +109,7 @@ def main():
         time.sleep(3)
 
         #
-        btn_change_save = driver.find_element(By.XPATH, "/html/body/vcd-app/div/div[2]/div/vcd-network-edge-tabset/vcd-tabset/vcd-vpn-tabset/vcd-tabset/vcd-vpn-ipsec/vcd-publish-banner/div/div/div/a[2]")
+        btn_change_save = driver.find_element(By.CLASS_NAME, "alert-save")
         
         btn_change_save.click()
         time.sleep(3)
@@ -127,14 +127,12 @@ def main():
         time.sleep(3)
 
         #
-        btn_discard_changes = driver.find_element(By.CLASS_NAME, "alert-discard")
+        btn_discard_changes = driver.find_element(By.CLASS_NAME, "alert-save")
         btn_discard_changes.click()
 
         #btn_change_save.click()
 
         time.sleep(3)
-
-
 
 
         # Realiza acciones en la página (puedes agregar más interacciones según tus necesidades)
