@@ -24,6 +24,7 @@ from requests.auth import HTTPBasicAuth
 from smtplib import SMTP
 from email.utils import parseaddr
 import reset_web_driver
+import call_dial_asterisk
 
 # set configuration values
 class Config:
@@ -40,7 +41,7 @@ app.config.from_object(Config())
 scheduler = APScheduler()
 
 # Configuración de la conexión SSH
-hostname = '192.168.31.1'
+hostname = '200.32.180.41'
 port = 22
 username = 'admin'
 password = 'Fynsa_Edge2021@'
@@ -67,7 +68,7 @@ scope = ['https://outlook.office365.com/.default']
 allowed_senders = ["carl.acevedoa@duocuc.cl", "cacevedo@acdata.cl","scancino@acdata.cl", "ctoro@acdata.cl","fynsabottest@gmail.com", "helpdesk@acdata.cl"]
 
 # Lista de instrucciones programadas
-instructions = ["Reiniciar", "Estado"]
+instructions = ["Reiniciar", "Estado","Test"]
 
 # Variables externas
 
@@ -265,15 +266,12 @@ def receiveEmail():
                         print("Confirmación reinicio Tunneles de Acceso")
                         resetService([sender_email], [sender_email])
 
-                    elif message_lower == "actualizar estado":
-
-                        notImage = None
-                        subjectMessage = "Confirmación de actualizacion del estado del Tunnel de Acceso"
-                        confirmation_text = "P2. Test actualizacion estado"
-                        sendEmail([sender_email], subjectMessage, [sender_email], confirmation_text, notImage)
-
+                    elif message_lower == "test":
+                        print("Call")
+                        call_dial_asterisk.mainCall()
+                        
                     elif message_lower == "estado":
-
+                        print("Test2")
                         print("Confirmación consulta estado del Tunnel de Acceso")
                         main([sender_email], [sender_email])
 

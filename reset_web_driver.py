@@ -112,7 +112,7 @@ def main():
         btn_change_save = driver.find_element(By.CLASS_NAME, "alert-save")
         
         btn_change_save.click()
-        time.sleep(3)
+        time.sleep(10)
 
         #
         btn_edit_IPsec.click()
