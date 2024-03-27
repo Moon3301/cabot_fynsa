@@ -1,23 +1,29 @@
 import socket
 import time
 
-# Se instancia socket de conexion
-s = socket.socket()
-
 def mainCall():
 
-    start_session_ami("BotAsterisk","1234","200.32.181.201", 5038)
+    # Se instancia socket de conexion
+    s = socket.socket()
 
-    #call(1514, 1512)
-    #auto_answer_call(1514)
-    call_externo(25712895)
+    start_session = start_session_ami("BotAsterisk","1234","200.32.181.201", 5038, s)
+
+    if start_session:
+
+        #call(1514, 1512)
+        #auto_answer_call(1514)
+        call_externo(25712895, s)
     
-    time.sleep(20)
+        time.sleep(20)
 
-    end_session_ami()
+        end_session = end_session_ami(s)
 
+        if end_session == False:
 
-def start_session_ami(user, secret, mi_ip, port):
+            s.send("Action: Logoff\n".encode())
+            s.close()
+
+def start_session_ami(user, secret, mi_ip, port, s):
 
     print("Iniciando ...")
 
@@ -37,16 +43,16 @@ def start_session_ami(user, secret, mi_ip, port):
 
     except Exception as e:
 
+        end_session_ami()
         print(f"Error: {e}")
+        print("No se pudo realizar la llamada !")
         return False
 
-
-def call(anexo_origen, anexo_destino):
+def call(anexo_origen, anexo_destino, s):
 
     try:
 
         print(f"Llamando desde el anexo {anexo_origen} al anexo: {anexo_destino}")
-
         #
         s.send(f"Action: Originate\n".encode())
         #
@@ -58,7 +64,7 @@ def call(anexo_origen, anexo_destino):
         #
         s.send(f"Priority: 1\n".encode())
         #
-        s.send(f"nCallerID: {anexo_origen}\n".encode())
+        s.send(f"CallerID: {anexo_origen}\n".encode())
 
         s.send("\n".encode())
 
@@ -66,10 +72,7 @@ def call(anexo_origen, anexo_destino):
 
         print(f"Error: {e}")
 
-
-
-
-def auto_answer_call(anexo_origen):
+def auto_answer_call(anexo_origen, s):
 
     try:
 
@@ -86,7 +89,7 @@ def auto_answer_call(anexo_origen):
         #
         s.send(f"Priority: 1\n".encode())
         #
-        s.send(f"nCallerID: {anexo_origen}\n".encode())
+        s.send(f"CallerID: {anexo_origen}\n".encode())
 
         s.send("\n".encode())
 
@@ -94,8 +97,7 @@ def auto_answer_call(anexo_origen):
 
         print(f"Error: {e}")
 
-
-def call_externo(exten_destino):
+def call_externo(exten_destino, s):
 
     try:
 
@@ -112,7 +114,7 @@ def call_externo(exten_destino):
         #
         s.send(f"Priority: 1\n".encode())
         #
-        s.send(f"nCallerID: {exten_destino}\n".encode())
+        s.send(f"CallerID: {exten_destino}\n".encode())
 
         s.send("\n".encode())
 
@@ -120,7 +122,7 @@ def call_externo(exten_destino):
 
         print(f"Error: {e}")
 
-def end_session_ami():
+def end_session_ami(s):
     try:
         print("Cerrando sesion ...")
         s.send("Action: Logoff\n".encode())
@@ -130,6 +132,3 @@ def end_session_ami():
     except Exception as e:
         print(f"Error: {e}")
         return False
-
-
-

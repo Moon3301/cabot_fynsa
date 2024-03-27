@@ -4,7 +4,6 @@ import paramiko
 import smtplib
 import email
 import imaplib
-from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
@@ -15,7 +14,8 @@ from PIL import Image, ImageDraw, ImageFont
 import base64
 import time
 import traceback
-from datetime import datetime, timedelta
+from datetime import timedelta, datetime
+import datetime
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 import requests
@@ -25,12 +25,13 @@ from smtplib import SMTP
 from email.utils import parseaddr
 import reset_web_driver
 import call_dial_asterisk
+import api_prtg
 
 # set configuration values
 class Config:
     SCHEDULER_API_ENABLED = True
     SCHEDULER_EXECUTORS = {
-        'default': {'type': 'threadpool', 'max_workers': 10}  # Ajusta el número según tus necesidades
+        'default': {'type': 'threadpool', 'max_workers': 12}  # Ajusta el número según tus necesidades
     }
 
 # Inicializar app flask
@@ -65,10 +66,13 @@ token_url = f'https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token'
 scope = ['https://outlook.office365.com/.default']
 
 # Usuarios permitidos para enviar instrucciones
-allowed_senders = ["carl.acevedoa@duocuc.cl", "cacevedo@acdata.cl","scancino@acdata.cl", "ctoro@acdata.cl","fynsabottest@gmail.com", "helpdesk@acdata.cl"]
+allowed_senders = ["carl.acevedoa@duocuc.cl", "cacevedo@acdata.cl","scancino@acdata.cl", "ctoro@acdata.cl","fynsabottest@gmail.com"]
 
 # Lista de instrucciones programadas
-instructions = ["Reiniciar", "Estado","Test"]
+instructions = ["Reiniciar", "Test","Estado"]
+#,"Request timed out (error ICMP # 11010)","TTL expired in transit (error ICMP # 11013)","Fallo, No se pudo establecer conexión (código: PE015)"
+
+tarea_reset_ipsec = False
 
 # Variables externas
 
@@ -249,34 +253,51 @@ def receiveEmail():
             print("Correo reconocido !")
             try:
                 subject = msg["Subject"]
+                
+                # Obtener el cuerpo del mensaje
+                #if msg.is_multipart():
+                #   for part in msg.get_payload():
+                #        if part.get_content_type() == 'text/plain':
+                #            body = part.get_payload()
+                #else:
+                #    body = msg.get_payload()
 
                 # Decodificar el asunto del mensaje manejando errores
                 decoded_subject = subject.encode('latin-1').decode('utf-8', errors='replace')
+                #decoded_body = body.encode('latin-1').decode('utf-8', errors='replace')
 
             except UnicodeDecodeError as e:
                 print(f"Error al decodificar el cuerpo del mensaje: {e}")
                 decoded_subject = f"Hola, {sender_name}.\n\n No se pudo decodificar el cuerpo del mensaje correctamente. \n\n Las instrucciones programadas son las siguientes: \n\n *reiniciar tuneles \n\n *consultar estado \n\n Debes ingresar la instruccion en el asunto del correo para ser reconocida"
 
             for instruction in instructions:
+
                 if re.search(instruction, decoded_subject, re.IGNORECASE):
                     print(f"Instrucción recibida: {instruction.lower()}")
                     message_lower = instruction.lower()
 
                     if message_lower == "reiniciar":
-                        print("Confirmación reinicio Tunneles de Acceso")
-                        resetService([sender_email], [sender_email])
+
+                        if tarea_reset_ipsec == False:
+
+                            print("Confirmación reinicio Tunneles de Acceso")
+                            resetService([sender_email], [sender_email])
+                        else:
+                            print("La tarea ya se esta ejecutando .. Reinciando tuenels IPsec")
 
                     elif message_lower == "test":
-                        print("Call")
+
+                        print("Test")   
                         call_dial_asterisk.mainCall()
                         
                     elif message_lower == "estado":
-                        print("Test2")
+                        
                         print("Confirmación consulta estado del Tunnel de Acceso")
                         main([sender_email], [sender_email])
 
                     break
             else:
+                print("Instruccion no reconocida !")
                 notImage = None
                 subjectMessage = f'No se reconoce la instruccion: {decoded_subject}'
                 cuerpo_html = f"""
@@ -292,16 +313,31 @@ def receiveEmail():
     mail.logout()
 
 def receiveEmailWrapper():
+
+    estado = ""
+
+    if tarea_reset_ipsec:
+        estado = "No Disponible"
+    else:
+        estado = "Disponible"
+
+    print(f"Estado Reset: {estado}")
     print("Esperando correos...")
     receiveEmail()  # Puedes añadir más instrucciones según sea necesario
 
 def obtener_hora_actual():
 
-    # Obtener la fecha y hora actual
-    fecha_hora_actual = datetime.now()
-    # Formatear la fecha y hora en el formato deseado
-    formato_deseado = "%d-%m-%Y %H:%M"
-    fecha_hora_formateada = fecha_hora_actual.strftime(formato_deseado)
+    try:
+
+        # Obtener la fecha y hora actual
+        fecha_hora_actual = datetime.datetime.now()
+        # Formatear la fecha y hora en el formato deseado
+        formato_deseado = "%d-%m-%Y %H:%M"
+        fecha_hora_formateada = fecha_hora_actual.strftime(formato_deseado)
+    
+    except Exception as e:
+
+        print(f"Error al obtener la hora actual: {e}")
 
     return fecha_hora_formateada
 
@@ -345,29 +381,30 @@ def main(destinatarios, cc):
 
 def resetService(destinatario, cc):
 
+    global tarea_reset_ipsec
+
+    tarea_reset_ipsec = True
     # Ejecutar comando para reiniciar servicio 
-    ######
-
     try:
-    
-        reset_web_driver.main()
+        
+        time.sleep(120)
+        #reset_web_driver.main()
 
-        ######
+        tarea_reset_ipsec = False
 
-        # Realiza la conexion SSH al servidor y obtiene el registro del comando indicado.
-        output = connectSSH('show service ipsec')
-
-        # Crea una imagen con el registro del comando
-        image = createImageFromLog(output)
-
-        create_email('reinicio', image, destinatario, cc)
-    
     except Exception as e:
 
         save_output_to_file(e)
-
+        tarea_reset_ipsec = False
         print(f"Error: {e}")
+    
+    # Realiza la conexion SSH al servidor y obtiene el registro del comando indicado.
+    output = connectSSH('show service ipsec')
 
+    # Crea una imagen con el registro del comando
+    image = createImageFromLog(output)
+
+    create_email('reinicio', image, destinatario, cc)
 
 def create_email(type, image, dest_email, cc_email):
 
@@ -465,6 +502,11 @@ def status_app(output):
     # Busca las palabras UP o DOWN en la palabra Status.
     status_matches = re.findall(r'Status: (UP|DOWN)', log)
 
+
+    if not status_matches:
+
+        return False
+    
     # Inicializa las variables para tunnel y channel
     tunnels = []
     channels = []
@@ -599,7 +641,7 @@ def tarea_1():
         save_output_to_file(e)
 
         # Calcular el próximo momento para ejecutar la tarea, 10 segundos después del error
-        next_run_time = datetime.now() + timedelta(seconds=10)
+        next_run_time = datetime.datetime.now() + timedelta(seconds=10)
 
         # Puedes reprogramar la tarea para intentar nuevamente
         scheduler.add_job(tarea_1, trigger='date', run_date=next_run_time)
@@ -618,7 +660,7 @@ def tarea_2():
 
         save_output_to_file(e)
         # Calcular el próximo momento para ejecutar la tarea, 10 segundos después del error
-        next_run_time = datetime.now() + timedelta(seconds=10)
+        next_run_time = datetime.datetime.now() + timedelta(seconds=10)
 
         # Puedes reprogramar la tarea para intentar nuevamente
         scheduler.add_job(tarea_2, trigger='date', run_date=next_run_time)
@@ -638,12 +680,12 @@ def tarea_3():
 
         save_output_to_file(e)
         # Calcular el próximo momento para ejecutar la tarea, 10 segundos después del error
-        next_run_time = datetime.now() + timedelta(seconds=10)
+        next_run_time = datetime.datetime.now() + timedelta(seconds=10)
 
         # Puedes reprogramar la tarea para intentar nuevamente
         scheduler.add_job(tarea_3, trigger='date', run_date=next_run_time)
 
-@scheduler.task(trigger=IntervalTrigger(minutes=30), id='4', max_instances=4)
+@scheduler.task(trigger=IntervalTrigger(minutes=30), id='4', max_instances=4, misfire_grace_time=1000)
 def check_service_status():
 
     try:
@@ -658,12 +700,12 @@ def check_service_status():
         save_output_to_file(e)
 
         # Calcular el próximo momento para ejecutar la tarea, 10 segundos después del error
-        next_run_time = datetime.now() + timedelta(seconds=10)
+        next_run_time = datetime.datetime.now() + timedelta(seconds=10)
 
         # Puedes reprogramar la tarea para intentar nuevamente
         scheduler.add_job(check_service_status, trigger='date', run_date=next_run_time)
 
-@scheduler.task(trigger=IntervalTrigger(minutes=1), id='5', max_instances=4)
+@scheduler.task(trigger=IntervalTrigger(minutes=1), id='5', max_instances=4, misfire_grace_time=1000)
 def receive_email():
 
     global contador_error_IMAP4
@@ -689,13 +731,50 @@ def receive_email():
             save_output_to_file(e)
 
             # Calcular el próximo momento para ejecutar la tarea, 10 segundos después del error
-            next_run_time = datetime.now() + timedelta(seconds=30)
+            next_run_time = datetime.datetime.now() + timedelta(seconds=30)
 
             # Reprogramar la tarea para intentar nuevamente
             scheduler.add_job(check_service_status, trigger='date', run_date=next_run_time)
 
+@scheduler.task(trigger=IntervalTrigger(minutes=17), id='6',max_instances=3, misfire_grace_time=1000)
+def status_sensor_prtg_day():
+
+    horario_actual = validar_horario_actual()
+
+    if(horario_actual == 'day'):
+
+        status_sensor = api_prtg.main(900)
+
+        if(status_sensor == False):
+            call_dial_asterisk.mainCall()
+
+@scheduler.task(trigger=IntervalTrigger(minutes=7), id='7',max_instances=3, misfire_grace_time=1000)
+def status_sensor_prtg_night():
+
+    horario_actual = validar_horario_actual()
+
+    if(horario_actual == 'night'):
+
+        status_sensor = api_prtg.main(300)
+
+        if(status_sensor == False):
+            call_dial_asterisk.mainCall()
+
+def validar_horario_actual():
+    hora_actual = datetime.datetime.now().time()
+
+    if hora_actual >= datetime.time(8, 0) and hora_actual < datetime.time(21, 0):
+        return "day"
+    elif hora_actual >= datetime.time(21, 0) or hora_actual < datetime.time(8, 0):
+        return "night"
+    else:
+        return "error"
+    
 scheduler.init_app(app)
 scheduler.start()
 
 if __name__ == '__main__':
+    
     app.run()
+
+    

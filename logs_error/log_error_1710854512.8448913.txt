@@ -1,0 +1,6 @@
+
+IPSec Server is running.
+AESNI is enabled.
+Total Sites: 0, 0 UP, 0 Down
+Total Tunnels: 0, 0 UP, 0 Down
+>
